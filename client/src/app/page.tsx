@@ -3,6 +3,7 @@
 import Link from "next/link";
 // import { ChatInterface } from '@/components/ChatInterface';
 import { ChatInterface } from "./components/ChatInterface";
+import { ChatInterface1 } from "./components/chat1/ChatInterfacePage";
 import { FiMapPin, FiCalendar, FiList, FiAward, FiMap } from "react-icons/fi";
 import { useEffect } from "react";
 
@@ -12,7 +13,7 @@ export default function Home() {
   //   window.scrollTo(0, 0);
   // }, []);
   return (
-    <main className="flex min-h-screen flex-col items-center">
+    <main className="flex min-h-screen  flex-col items-center border-5 border-red-500">
       {/* Hero Section */}
       <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-20">
         <div className="container mx-auto px-4 text-center">
@@ -93,8 +94,26 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Move To chat Page Button */}
+      <div id="chat" className=" bg-gray-50 w-full py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+            Ready to Start Planning?
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Let our AI create a personalized itinerary for your next adventure.
+          </p>
+          <Link
+            href="/chatPage"
+            className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-3 rounded-full font-semibold transition-colors"
+          >
+            Start Planning Now
+          </Link>
+        </div>
+      </div>
+
       {/* Chat Interface Section */}
-      <div id="chat" className="container mx-auto px-4 py-16 max-w-4xl">
+      {/* <div id="chat" className="container mx-auto px-4 py-16 max-w-4xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-800 mb-4">
             Start Planning Your Trip
@@ -106,9 +125,9 @@ export default function Home() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <ChatInterface />
+          <ChatInterface1 />
         </div>
-      </div>
+      </div> */}
 
       {/* Benefits Section */}
       <div className="bg-gray-50 w-full py-16">

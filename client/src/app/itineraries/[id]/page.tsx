@@ -7,20 +7,21 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { itineraryAPI } from "@/utils/api";
 import { FiArrowLeft } from "react-icons/fi";
+import { parseItineraryData } from "@/utils/itineraryParser";
 
 // import html2pdf from "html2pdf.js";
 // import dynamic from "next/dynamic";
 
 // Interface definitions for our data structure
-interface ItineraryPreferences {
-  cuisines: string[];
-  placeTypes: string[];
-  specialRequirements: string[];
-  otherInterests: string[];
-}
+// interface ItineraryPreferences {
+//   cuisines: string[];
+//   placeTypes: string[];
+//   specialRequirements: string[];
+//   otherInterests: string[];
+// }
 
 interface Itinerary {
-  preferences: ItineraryPreferences;
+  // preferences: ItineraryPreferences;
   _id: string;
   userId: string;
   chatId: string;
@@ -28,7 +29,7 @@ interface Itinerary {
   destination: string;
   startDate: string;
   endDate: string;
-  days: any[];
+  // days: any[];
   rawResponse: string;
   createdAt: string;
   updatedAt: string;
@@ -79,6 +80,7 @@ const TravelItinerary = ({ params }: PageProps) => {
         const response = await itineraryAPI.getItineraryById(id);
         // const data = await response.json();
         // setItineraryData(data);
+
         setItineraryData(response);
       } catch (err) {
         console.error("Error fetching itinerary:", err);
@@ -93,55 +95,7 @@ const TravelItinerary = ({ params }: PageProps) => {
     }
   }, [isAuthenticated, id]);
 
-  // Parse the raw response into structured sections
-  const parseRawResponse = (rawResponse: string): Section[] => {
-    // Split by section dividers (---)
-    const rawSections = rawResponse
-      .split("---")
-      .filter((section) => section.trim() !== "");
-
-    return rawSections.map((section) => {
-      const lines = section.trim().split("\n");
-      let title = "";
-      let content = [];
-
-      // Extract the title (usually starts with ### or similar)
-      if (lines[0].includes("###")) {
-        title = lines[0].replace(/#+\s*\*\*(.*)\*\*/, "$1").trim();
-        content = lines.slice(1);
-      } else {
-        content = lines;
-      }
-
-      // Assign appropriate icon based on section title
-      let icon;
-      if (title.toLowerCase().includes("time to visit")) {
-        icon = <CalendarIcon />;
-      } else if (title.toLowerCase().includes("how to reach")) {
-        icon = <TransportIcon />;
-      } else if (title.toLowerCase().includes("places to visit")) {
-        icon = <LocationIcon />;
-      } else if (title.toLowerCase().includes("things to do")) {
-        icon = <ActivityIcon />;
-      } else if (title.toLowerCase().includes("where to stay")) {
-        icon = <HotelIcon />;
-      } else if (title.toLowerCase().includes("where to eat")) {
-        icon = <FoodIcon />;
-      } else if (title.toLowerCase().includes("travel tips")) {
-        icon = <TipsIcon />;
-      } else {
-        icon = <InfoIcon />;
-      }
-
-      return {
-        title,
-        content: content.join("\n"),
-        icon,
-      };
-    });
-  };
-
-  // console.log("parsed sections", parseRawResponse(itineraryData?.itinerary.rawResponse));
+  console.log("Itinerary data:", itineraryData);
 
   if (loading) {
     return (
@@ -215,14 +169,224 @@ const TravelItinerary = ({ params }: PageProps) => {
   }
 
   const { itinerary } = itineraryData;
-  const sections = parseRawResponse(itinerary.rawResponse);
-  console.log("sections", sections);
+  // const sections = parseRawResponse(itinerary.rawResponse);
+  const parsedSections = parseItineraryData(itinerary.rawResponse);
+  console.log("Parsed sections:", parsedSections);
+
+  // const handlePrintPDF = async () => {
+  //   const html2pdfModule = await import("html2pdf.js");
+  //   const html2pdf = html2pdfModule.default;
+  //   try {
+  //     // Create a new div element that will contain our printable content
+  //     const printContent = document.createElement("div");
+  //     printContent.style.padding = "20px";
+  //     printContent.style.fontFamily = "Arial, sans-serif";
+  //     printContent.style.maxWidth = "800px";
+  //     printContent.style.margin = "0 auto";
+
+  //     // Add title
+  //     const title = document.createElement("h1");
+  //     title.textContent = `${itinerary.destination} Travel Itinerary`;
+  //     title.style.textAlign = "center";
+  //     title.style.color = "#4169E1";
+  //     title.style.borderBottom = "2px solid #4169E1";
+  //     title.style.paddingBottom = "10px";
+  //     printContent.appendChild(title);
+
+  //     // Add dates
+  //     const dates = document.createElement("p");
+  //     dates.textContent = `${new Date(
+  //       itinerary.startDate
+  //     ).toLocaleDateString()} - ${new Date(
+  //       itinerary.endDate
+  //     ).toLocaleDateString()}`;
+  //     dates.style.textAlign = "center";
+  //     dates.style.fontWeight = "bold";
+  //     dates.style.marginBottom = "20px";
+  //     printContent.appendChild(dates);
+
+  //     // Process each section
+  //     sections.forEach((section) => {
+  //       // Create section header
+  //       const sectionTitle = document.createElement("h2");
+  //       sectionTitle.textContent = section.title;
+  //       sectionTitle.style.color = "#4169E1";
+  //       sectionTitle.style.borderBottom = "1px solid #ddd";
+  //       sectionTitle.style.paddingBottom = "5px";
+  //       sectionTitle.style.marginTop = "25px";
+  //       printContent.appendChild(sectionTitle);
+
+  //       // Process content
+  //       const contentLines = section.content.split("\n");
+
+  //       contentLines.forEach((line) => {
+  //         if (!line.trim()) {
+  //           // Empty line - add spacing
+  //           const spacer = document.createElement("div");
+  //           spacer.style.height = "10px";
+  //           printContent.appendChild(spacer);
+  //           return;
+  //         }
+
+  //         // Sub-bullet points (indented bullet points)
+  //         if (line.trim().match(/^\s+[-*]\s/)) {
+  //           const item = document.createElement("div");
+  //           item.style.marginLeft = "40px";
+  //           item.style.display = "flex";
+  //           item.style.marginBottom = "5px";
+
+  //           const bullet = document.createElement("span");
+  //           bullet.innerHTML = "&#8226; ";
+  //           bullet.style.marginRight = "8px";
+  //           bullet.style.color = "#4169E1";
+  //           item.appendChild(bullet);
+
+  //           const text = document.createElement("span");
+  //           text.textContent = line.trim().replace(/^\s+[-*]\s*/, "");
+  //           item.appendChild(text);
+
+  //           printContent.appendChild(item);
+  //         }
+  //         // Special case for -** or *** starting (bold bullet points)
+  //         else if (
+  //           line.trim().startsWith("-**") ||
+  //           line.trim().startsWith("***")
+  //         ) {
+  //           const item = document.createElement("div");
+  //           item.style.marginLeft = "20px";
+  //           item.style.display = "flex";
+  //           item.style.marginBottom = "5px";
+
+  //           const bullet = document.createElement("span");
+  //           bullet.innerHTML = "&#8226; ";
+  //           bullet.style.marginRight = "8px";
+  //           bullet.style.color = "#4169E1";
+  //           item.appendChild(bullet);
+
+  //           const text = document.createElement("span");
+  //           text.innerHTML = `<strong>${line
+  //             .replace(/^[-*]\*\*\s*/, "")
+  //             .replace(/\*\*/, "")}</strong>`;
+  //           item.appendChild(text);
+
+  //           printContent.appendChild(item);
+  //         }
+  //         // Regular bullet points
+  //         else if (line.trim().startsWith("-") || line.trim().startsWith("*")) {
+  //           const item = document.createElement("div");
+  //           item.style.marginLeft = "20px";
+  //           item.style.display = "flex";
+  //           item.style.marginBottom = "5px";
+
+  //           const bullet = document.createElement("span");
+  //           bullet.innerHTML = "&#8226; ";
+  //           bullet.style.marginRight = "8px";
+  //           bullet.style.color = "#4169E1";
+  //           item.appendChild(bullet);
+
+  //           const text = document.createElement("span");
+  //           text.textContent = line.replace(/^[-*]\s*/, "");
+  //           item.appendChild(text);
+
+  //           printContent.appendChild(item);
+  //         }
+  //         // Numbered list
+  //         else if (/^\d+\./.test(line.trim())) {
+  //           const [num, ...rest] = line.trim().split(".");
+
+  //           const item = document.createElement("div");
+  //           item.style.marginLeft = "20px";
+  //           item.style.display = "flex";
+  //           item.style.marginBottom = "5px";
+
+  //           const number = document.createElement("span");
+  //           number.textContent = `${num}. `;
+  //           number.style.marginRight = "8px";
+  //           number.style.fontWeight = "bold";
+  //           number.style.color = "#4169E1";
+  //           number.style.minWidth = "25px";
+  //           item.appendChild(number);
+
+  //           const text = document.createElement("span");
+  //           text.textContent = rest.join(".").trim();
+  //           item.appendChild(text);
+
+  //           printContent.appendChild(item);
+  //         }
+  //         // Bold text handling
+  //         else if (line.includes("**")) {
+  //           const para = document.createElement("p");
+  //           para.style.marginBottom = "10px";
+  //           para.style.lineHeight = "1.5";
+
+  //           let formattedText = line;
+  //           // Replace ** markers with HTML strong tags
+  //           formattedText = formattedText.replace(
+  //             /\*\*(.*?)\*\*/g,
+  //             "<strong>$1</strong>"
+  //           );
+
+  //           para.innerHTML = formattedText;
+  //           printContent.appendChild(para);
+  //         }
+  //         // Regular text
+  //         else {
+  //           const para = document.createElement("p");
+  //           para.textContent = line;
+  //           para.style.marginBottom = "10px";
+  //           para.style.lineHeight = "1.5";
+  //           printContent.appendChild(para);
+  //         }
+  //       });
+  //     });
+
+  //     // Add a footer
+  //     const footer = document.createElement("div");
+  //     footer.style.marginTop = "30px";
+  //     footer.style.borderTop = "1px solid #ddd";
+  //     footer.style.paddingTop = "10px";
+  //     footer.style.textAlign = "center";
+  //     footer.style.fontSize = "12px";
+  //     footer.style.color = "#777";
+  //     footer.textContent = `Created on ${new Date().toLocaleDateString()}`;
+  //     printContent.appendChild(footer);
+
+  //     // Temporarily append to document
+  //     document.body.appendChild(printContent);
+
+  //     // Configure html2pdf options
+  //     const options = {
+  //       margin: 10,
+  //       filename: `${itinerary.destination}_travel_itinerary.pdf`,
+  //       image: { type: "jpeg", quality: 0.98 },
+  //       html2canvas: { scale: 2, useCORS: true },
+  //       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+  //     };
+
+  //     // Generate PDF
+  //     html2pdf()
+  //       .from(printContent)
+  //       .set(options)
+  //       .save()
+  //       .then(() => {
+  //         // Remove the temporary element after PDF is generated
+  //         document.body.removeChild(printContent);
+  //       });
+  //   } catch (error) {
+  //     console.error("Error generating PDF:", error);
+  //     alert("Failed to generate PDF. Please try again.");
+  //   }
+  // };
+
+  // PDF Generation function using the structured data
+  // Add this to your TravelItinerary component
 
   const handlePrintPDF = async () => {
-    const html2pdfModule = await import("html2pdf.js");
-    const html2pdf = html2pdfModule.default;
     try {
-      // Create a new div element that will contain our printable content
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default;
+
+      // Create a new div element for the PDF content
       const printContent = document.createElement("div");
       printContent.style.padding = "20px";
       printContent.style.fontFamily = "Arial, sans-serif";
@@ -250,9 +414,12 @@ const TravelItinerary = ({ params }: PageProps) => {
       dates.style.marginBottom = "20px";
       printContent.appendChild(dates);
 
-      // Process each section
-      sections.forEach((section) => {
-        // Create section header
+      // Get the parsed sections
+      const parsedSections = parseItineraryData(itinerary.rawResponse);
+
+      // Process each section for the PDF
+      parsedSections.forEach((section) => {
+        // Add section header
         const sectionTitle = document.createElement("h2");
         sectionTitle.textContent = section.title;
         sectionTitle.style.color = "#4169E1";
@@ -261,127 +428,211 @@ const TravelItinerary = ({ params }: PageProps) => {
         sectionTitle.style.marginTop = "25px";
         printContent.appendChild(sectionTitle);
 
-        // Process content
-        const contentLines = section.content.split("\n");
-
-        contentLines.forEach((line) => {
-          if (!line.trim()) {
-            // Empty line - add spacing
-            const spacer = document.createElement("div");
-            spacer.style.height = "10px";
-            printContent.appendChild(spacer);
-            return;
-          }
-
-          // Sub-bullet points (indented bullet points)
-          if (line.trim().match(/^\s+[-*]\s/)) {
-            const item = document.createElement("div");
-            item.style.marginLeft = "40px";
-            item.style.display = "flex";
-            item.style.marginBottom = "5px";
-
-            const bullet = document.createElement("span");
-            bullet.innerHTML = "&#8226; ";
-            bullet.style.marginRight = "8px";
-            bullet.style.color = "#4169E1";
-            item.appendChild(bullet);
-
-            const text = document.createElement("span");
-            text.textContent = line.trim().replace(/^\s+[-*]\s*/, "");
-            item.appendChild(text);
-
-            printContent.appendChild(item);
-          }
-          // Special case for -** or *** starting (bold bullet points)
-          else if (
-            line.trim().startsWith("-**") ||
-            line.trim().startsWith("***")
-          ) {
-            const item = document.createElement("div");
-            item.style.marginLeft = "20px";
-            item.style.display = "flex";
-            item.style.marginBottom = "5px";
-
-            const bullet = document.createElement("span");
-            bullet.innerHTML = "&#8226; ";
-            bullet.style.marginRight = "8px";
-            bullet.style.color = "#4169E1";
-            item.appendChild(bullet);
-
-            const text = document.createElement("span");
-            text.innerHTML = `<strong>${line
-              .replace(/^[-*]\*\*\s*/, "")
-              .replace(/\*\*/, "")}</strong>`;
-            item.appendChild(text);
-
-            printContent.appendChild(item);
-          }
-          // Regular bullet points
-          else if (line.trim().startsWith("-") || line.trim().startsWith("*")) {
-            const item = document.createElement("div");
-            item.style.marginLeft = "20px";
-            item.style.display = "flex";
-            item.style.marginBottom = "5px";
-
-            const bullet = document.createElement("span");
-            bullet.innerHTML = "&#8226; ";
-            bullet.style.marginRight = "8px";
-            bullet.style.color = "#4169E1";
-            item.appendChild(bullet);
-
-            const text = document.createElement("span");
-            text.textContent = line.replace(/^[-*]\s*/, "");
-            item.appendChild(text);
-
-            printContent.appendChild(item);
-          }
-          // Numbered list
-          else if (/^\d+\./.test(line.trim())) {
-            const [num, ...rest] = line.trim().split(".");
-
-            const item = document.createElement("div");
-            item.style.marginLeft = "20px";
-            item.style.display = "flex";
-            item.style.marginBottom = "5px";
-
-            const number = document.createElement("span");
-            number.textContent = `${num}. `;
-            number.style.marginRight = "8px";
-            number.style.fontWeight = "bold";
-            number.style.color = "#4169E1";
-            number.style.minWidth = "25px";
-            item.appendChild(number);
-
-            const text = document.createElement("span");
-            text.textContent = rest.join(".").trim();
-            item.appendChild(text);
-
-            printContent.appendChild(item);
-          }
-          // Bold text handling
-          else if (line.includes("**")) {
-            const para = document.createElement("p");
-            para.style.marginBottom = "10px";
-            para.style.lineHeight = "1.5";
-
-            let formattedText = line;
-            // Replace ** markers with HTML strong tags
-            formattedText = formattedText.replace(
+        // Add section content
+        section.content.forEach((line) => {
+          const para = document.createElement("p");
+          // Handle bold formatting
+          if (line.includes("**")) {
+            para.innerHTML = line.replace(
               /\*\*(.*?)\*\*/g,
               "<strong>$1</strong>"
             );
-
-            para.innerHTML = formattedText;
-            printContent.appendChild(para);
-          }
-          // Regular text
-          else {
-            const para = document.createElement("p");
+          } else {
             para.textContent = line;
+          }
+          para.style.marginBottom = "10px";
+          para.style.lineHeight = "1.5";
+          printContent.appendChild(para);
+        });
+
+        // Add section bullet points
+        if (section.bulletPoints.length > 0) {
+          const bulletList = document.createElement("ul");
+          bulletList.style.marginLeft = "20px";
+          bulletList.style.marginBottom = "15px";
+
+          section.bulletPoints.forEach((point) => {
+            const item = document.createElement("li");
+            // Handle bold formatting
+            if (point.includes("**")) {
+              item.innerHTML = point.replace(
+                /\*\*(.*?)\*\*/g,
+                "<strong>$1</strong>"
+              );
+            } else {
+              item.textContent = point;
+            }
+            item.style.marginBottom = "5px";
+            item.style.lineHeight = "1.5";
+            bulletList.appendChild(item);
+          });
+
+          printContent.appendChild(bulletList);
+        }
+
+        // Process subsections
+        section.subSections.forEach((subSection) => {
+          // Add subsection header
+          const subSectionTitle = document.createElement("h3");
+          subSectionTitle.textContent = subSection.title;
+          subSectionTitle.style.color = "#4169E1";
+          subSectionTitle.style.marginTop = "20px";
+          subSectionTitle.style.marginBottom = "10px";
+          subSectionTitle.style.paddingLeft = "15px";
+          printContent.appendChild(subSectionTitle);
+
+          // Add subsection content
+          subSection.content.forEach((line) => {
+            const para = document.createElement("p");
+            // Handle bold formatting
+            if (line.includes("**")) {
+              para.innerHTML = line.replace(
+                /\*\*(.*?)\*\*/g,
+                "<strong>$1</strong>"
+              );
+            } else {
+              para.textContent = line;
+            }
             para.style.marginBottom = "10px";
             para.style.lineHeight = "1.5";
+            para.style.paddingLeft = "15px";
             printContent.appendChild(para);
+          });
+
+          // Add subsection bullet points
+          if (subSection.bulletPoints.length > 0) {
+            const bulletList = document.createElement("ul");
+            bulletList.style.marginLeft = "35px";
+            bulletList.style.marginBottom = "15px";
+
+            subSection.bulletPoints.forEach((point) => {
+              const item = document.createElement("li");
+              // Handle bold formatting
+              if (point.includes("**")) {
+                item.innerHTML = point.replace(
+                  /\*\*(.*?)\*\*/g,
+                  "<strong>$1</strong>"
+                );
+              } else {
+                item.textContent = point;
+              }
+              item.style.marginBottom = "5px";
+              item.style.lineHeight = "1.5";
+              bulletList.appendChild(item);
+            });
+
+            printContent.appendChild(bulletList);
           }
+
+          // Process sub-subsections
+          subSection.subSections.forEach((subSubSection) => {
+            // Add sub-subsection header
+            const subSubSectionTitle = document.createElement("h4");
+            subSubSectionTitle.textContent = subSubSection.title;
+            subSubSectionTitle.style.color = "#4169E1";
+            subSubSectionTitle.style.marginTop = "15px";
+            subSubSectionTitle.style.marginBottom = "8px";
+            subSubSectionTitle.style.paddingLeft = "30px";
+            printContent.appendChild(subSubSectionTitle);
+
+            // Add sub-subsection content
+            subSubSection.content.forEach((line) => {
+              const para = document.createElement("p");
+              // Handle bold formatting
+              if (line.includes("**")) {
+                para.innerHTML = line.replace(
+                  /\*\*(.*?)\*\*/g,
+                  "<strong>$1</strong>"
+                );
+              } else {
+                para.textContent = line;
+              }
+              para.style.marginBottom = "8px";
+              para.style.lineHeight = "1.5";
+              para.style.paddingLeft = "30px";
+              printContent.appendChild(para);
+            });
+
+            // Add sub-subsection bullet points
+            if (subSubSection.bulletPoints.length > 0) {
+              const bulletList = document.createElement("ul");
+              bulletList.style.marginLeft = "50px";
+              bulletList.style.marginBottom = "12px";
+
+              subSubSection.bulletPoints.forEach((point) => {
+                const item = document.createElement("li");
+                // Handle bold formatting
+                if (point.includes("**")) {
+                  item.innerHTML = point.replace(
+                    /\*\*(.*?)\*\*/g,
+                    "<strong>$1</strong>"
+                  );
+                } else {
+                  item.textContent = point;
+                }
+                item.style.marginBottom = "5px";
+                item.style.lineHeight = "1.5";
+                bulletList.appendChild(item);
+              });
+
+              printContent.appendChild(bulletList);
+            }
+
+            // Process sub-sub-subsections (terminal level)
+            subSubSection.subSections.forEach((subSubSubSection) => {
+              // Add sub-sub-subsection header
+              const subSubSubSectionTitle = document.createElement("h5");
+              subSubSubSectionTitle.textContent = subSubSubSection.title;
+              subSubSubSectionTitle.style.color = "#4169E1";
+              subSubSubSectionTitle.style.marginTop = "12px";
+              subSubSubSectionTitle.style.marginBottom = "6px";
+              subSubSubSectionTitle.style.paddingLeft = "45px";
+              printContent.appendChild(subSubSubSectionTitle);
+
+              // Add sub-sub-subsection content
+              subSubSubSection.content.forEach((line) => {
+                const para = document.createElement("p");
+                // Handle bold formatting
+                if (line.includes("**")) {
+                  para.innerHTML = line.replace(
+                    /\*\*(.*?)\*\*/g,
+                    "<strong>$1</strong>"
+                  );
+                } else {
+                  para.textContent = line;
+                }
+                para.style.marginBottom = "6px";
+                para.style.lineHeight = "1.5";
+                para.style.paddingLeft = "45px";
+                printContent.appendChild(para);
+              });
+
+              // Add sub-sub-subsection bullet points
+              if (subSubSubSection.bulletPoints.length > 0) {
+                const bulletList = document.createElement("ul");
+                bulletList.style.marginLeft = "65px";
+                bulletList.style.marginBottom = "10px";
+
+                subSubSubSection.bulletPoints.forEach((point) => {
+                  const item = document.createElement("li");
+                  // Handle bold formatting
+                  if (point.includes("**")) {
+                    item.innerHTML = point.replace(
+                      /\*\*(.*?)\*\*/g,
+                      "<strong>$1</strong>"
+                    );
+                  } else {
+                    item.textContent = point;
+                  }
+                  item.style.marginBottom = "4px";
+                  item.style.lineHeight = "1.5";
+                  bulletList.appendChild(item);
+                });
+
+                printContent.appendChild(bulletList);
+              }
+            });
+          });
         });
       });
 
@@ -396,7 +647,7 @@ const TravelItinerary = ({ params }: PageProps) => {
       footer.textContent = `Created on ${new Date().toLocaleDateString()}`;
       printContent.appendChild(footer);
 
-      // Temporarily append to document
+      // Temporarily append to document body
       document.body.appendChild(printContent);
 
       // Configure html2pdf options
@@ -422,7 +673,6 @@ const TravelItinerary = ({ params }: PageProps) => {
       alert("Failed to generate PDF. Please try again.");
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto">
@@ -473,7 +723,7 @@ const TravelItinerary = ({ params }: PageProps) => {
               </div>
 
               {/* Special Requirements */}
-              {itinerary.preferences.specialRequirements.length > 0 && (
+              {/* {itinerary.preferences.specialRequirements.length > 0 && (
                 <div className="mt-6 md:mt-0">
                   <div className="text-sm font-medium mb-2 opacity-80">
                     Special Requirements:
@@ -491,7 +741,7 @@ const TravelItinerary = ({ params }: PageProps) => {
                     )}
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -509,7 +759,7 @@ const TravelItinerary = ({ params }: PageProps) => {
             >
               Overview
             </button>
-            {sections.map((section, index) => (
+            {parsedSections.map((section, index) => (
               <button
                 key={index}
                 className={`flex-shrink-0 px-4 py-2 rounded-md font-medium text-sm ${
@@ -519,8 +769,7 @@ const TravelItinerary = ({ params }: PageProps) => {
                 }`}
                 onClick={() => setActiveTab(`section-${index}`)}
               >
-                {/* {section.title} */}
-                {section.title == "" ? "Let's Go!" : section.title}
+                {section.title || "Untitled Section"}
               </button>
             ))}
           </div>
@@ -535,7 +784,7 @@ const TravelItinerary = ({ params }: PageProps) => {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sections.map((section, index) => (
+                {parsedSections.map((section, index) => (
                   <div
                     key={index}
                     className="bg-gray-50 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
@@ -543,15 +792,15 @@ const TravelItinerary = ({ params }: PageProps) => {
                   >
                     <div className="flex items-center mb-4">
                       <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                        {section.icon}
+                        {getIconComponent(section.icon)}
                       </div>
                       <h3 className="ml-3 text-lg font-semibold text-gray-800">
                         {section.title}
                       </h3>
                     </div>
                     <p className="text-gray-600 line-clamp-3">
-                      {section.content.replace(/^[-*•]\s*/gm, "").slice(0, 120)}
-                      ...
+                      {section.content.join(" ").slice(0, 120)}
+                      {section.content.join(" ").length > 120 ? "..." : ""}
                     </p>
                     <div className="flex justify-end mt-4">
                       <span className="text-blue-600 font-medium text-sm flex items-center">
@@ -579,148 +828,83 @@ const TravelItinerary = ({ params }: PageProps) => {
               </div>
             </div>
           ) : (
-            sections.map(
+            parsedSections.map(
               (section, index) =>
                 activeTab === `section-${index}` && (
                   <div key={index} className="p-6 md:p-8">
                     <div className="flex items-center mb-6">
                       <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                        {section.icon}
+                        {getIconComponent(section.icon)}
                       </div>
                       <h2 className="ml-3 text-2xl font-bold text-gray-800">
                         {section.title}
                       </h2>
                     </div>
 
-                    <div className="prose max-w-none">
-                      {section.content.split("\n").map((line, lineIndex) => {
-                        // Handle bullet points
-                        if (
-                          line.trim().startsWith("-") ||
-                          line.trim().startsWith("*")
-                        ) {
-                          const text = line.replace(/^[-*]\s*/, "");
-                          // Check for bold text in bullet points
-                          if (text.includes("**")) {
-                            const parts = text.split(/\*\*(.*?)\*\*/);
-                            return (
-                              <div
-                                key={lineIndex}
-                                className="flex items-start mb-3"
-                              >
-                                <div className="text-blue-500 mr-2 mt-1">•</div>
-                                <div className="flex-1">
-                                  {parts.map((part, partIndex) =>
-                                    partIndex % 2 === 0 ? (
-                                      <span key={partIndex}>{part}</span>
-                                    ) : (
-                                      <span
-                                        key={partIndex}
-                                        className="font-bold"
-                                      >
-                                        {part}
-                                      </span>
-                                    )
-                                  )}
-                                </div>
+                    {/* Main section content */}
+                    <div className="prose max-w-none mb-6">
+                      {renderContent(section.content)}
+                      {renderBulletPoints(section.bulletPoints)}
+                    </div>
+
+                    {/* Render sub-sections */}
+                    {section.subSections.map((subSection, subIndex) => (
+                      <div key={subIndex} className="mt-8 border-t pt-6">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                          {subSection.title}
+                        </h3>
+
+                        {/* Sub-section content */}
+                        <div className="prose max-w-none ml-4 mb-4">
+                          {renderContent(subSection.content)}
+                          {renderBulletPoints(subSection.bulletPoints)}
+                        </div>
+
+                        {/* Render sub-sub-sections */}
+                        {subSection.subSections.map(
+                          (subSubSection, subSubIndex) => (
+                            <div key={subSubIndex} className="mt-4 ml-4">
+                              <h4 className="text-lg font-medium text-gray-800 mb-3">
+                                {subSubSection.title}
+                              </h4>
+
+                              {/* Sub-sub-section content */}
+                              <div className="prose max-w-none ml-4 mb-4">
+                                {renderContent(subSubSection.content)}
+                                {renderBulletPoints(subSubSection.bulletPoints)}
                               </div>
-                            );
-                          }
 
-                          return (
-                            <div
-                              key={lineIndex}
-                              className="flex items-start mb-3"
-                            >
-                              <div className="text-blue-500 mr-2 mt-1">•</div>
-                              <div className="flex-1">{text}</div>
-                            </div>
-                          );
-                        }
+                              {/* Render sub-sub-sub-sections */}
+                              {subSubSection.subSections.map(
+                                (subSubSubSection, subSubSubIndex) => (
+                                  <div
+                                    key={subSubSubIndex}
+                                    className="mt-3 ml-4"
+                                  >
+                                    <h5 className="text-base font-medium text-gray-700 mb-2">
+                                      {subSubSubSection.title}
+                                    </h5>
 
-                        // Handle numbered lists
-                        if (/^\d+\./.test(line.trim())) {
-                          const [num, ...rest] = line.trim().split(".");
-                          const text = rest.join(".").trim();
-
-                          // Check for bold text in numbered points
-                          if (text.includes("**")) {
-                            const parts = text.split(/\*\*(.*?)\*\*/);
-                            return (
-                              <div
-                                key={lineIndex}
-                                className="flex items-start mb-3"
-                              >
-                                <div className="text-blue-500 font-bold mr-2 w-5 text-center">
-                                  {num}.
-                                </div>
-                                <div className="flex-1">
-                                  {parts.map((part, partIndex) =>
-                                    partIndex % 2 === 0 ? (
-                                      <span key={partIndex}>{part}</span>
-                                    ) : (
-                                      <span
-                                        key={partIndex}
-                                        className="font-bold"
-                                      >
-                                        {part}
-                                      </span>
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div
-                              key={lineIndex}
-                              className="flex items-start mb-3"
-                            >
-                              <div className="text-blue-500 font-bold mr-2 w-5 text-center">
-                                {num}.
-                              </div>
-                              <div className="flex-1">{text}</div>
-                            </div>
-                          );
-                        }
-
-                        // Regular paragraph with markdown bold text support
-                        if (line.includes("**")) {
-                          const parts = line.split(/\*\*(.*?)\*\*/);
-                          return line.trim() === "" ? (
-                            <div key={lineIndex} className="h-4"></div>
-                          ) : (
-                            <p key={lineIndex} className="mb-3">
-                              {parts.map((part, partIndex) =>
-                                partIndex % 2 === 0 ? (
-                                  <span key={partIndex}>{part}</span>
-                                ) : (
-                                  <span key={partIndex} className="font-bold">
-                                    {part}
-                                  </span>
+                                    {/* Sub-sub-sub-section content */}
+                                    <div className="prose max-w-none ml-4">
+                                      {renderContent(subSubSubSection.content)}
+                                      {renderBulletPoints(
+                                        subSubSubSection.bulletPoints
+                                      )}
+                                    </div>
+                                  </div>
                                 )
                               )}
-                            </p>
-                          );
-                        }
-
-                        // Regular paragraph
-                        return line.trim() === "" ? (
-                          <div key={lineIndex} className="h-4"></div>
-                        ) : (
-                          <p key={lineIndex} className="mb-3">
-                            {line}
-                          </p>
-                        );
-                      })}
-                    </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )
             )
           )}
         </div>
-
         {/* Footer with print and share options */}
         <div className="mt-6 flex justify-between">
           <button
@@ -953,3 +1137,82 @@ const FoodIcon = () => (
 );
 
 export default TravelItinerary;
+
+const getIconComponent = (iconName: string | undefined) => {
+  switch (iconName) {
+    case "LocationIcon":
+      return <LocationIcon />;
+    case "HotelIcon":
+      return <HotelIcon />;
+    case "TipsIcon":
+      return <TipsIcon />;
+    default:
+      return <InfoIcon />;
+  }
+};
+
+const renderContent = (content: string[]) => {
+  return content.map((line, lineIndex) => {
+    // Parse for bold formatting with ** markers
+    if (line.includes("**")) {
+      const parts = line.split(/\*\*(.*?)\*\*/);
+      return (
+        <p key={lineIndex} className="mb-3">
+          {parts.map((part, partIndex) =>
+            partIndex % 2 === 0 ? (
+              <span key={partIndex}>{part}</span>
+            ) : (
+              <span key={partIndex} className="font-bold">
+                {part}
+              </span>
+            )
+          )}
+        </p>
+      );
+    }
+
+    // Regular paragraph
+    return line.trim() === "" ? (
+      <div key={lineIndex} className="h-4"></div>
+    ) : (
+      <p key={lineIndex} className="mb-3">
+        {line}
+      </p>
+    );
+  });
+};
+
+// Helper function to render bullet points
+const renderBulletPoints = (bulletPoints: string[]) => {
+  if (bulletPoints.length === 0) return null;
+
+  return (
+    <ul className="list-disc pl-5 space-y-2 mb-4">
+      {bulletPoints.map((point, index) => {
+        // Parse for bold formatting with ** markers
+        if (point.includes("**")) {
+          const parts = point.split(/\*\*(.*?)\*\*/);
+          return (
+            <li key={index} className="text-gray-700">
+              {parts.map((part, partIndex) =>
+                partIndex % 2 === 0 ? (
+                  <span key={partIndex}>{part}</span>
+                ) : (
+                  <span key={partIndex} className="font-bold">
+                    {part}
+                  </span>
+                )
+              )}
+            </li>
+          );
+        }
+
+        return (
+          <li key={index} className="text-gray-700">
+            {point}
+          </li>
+        );
+      })}
+    </ul>
+  );
+};

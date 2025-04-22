@@ -109,8 +109,7 @@ export const itineraryAPI = {
     destination: string,
     rawResponse: string,
     startDate: Date,
-    endDate: Date,
-    preferences: string[]
+    endDate: Date
   ) => {
     const response = await fetchWithAuth("/itinerary", {
       method: "POST",
@@ -121,7 +120,6 @@ export const itineraryAPI = {
         rawResponse,
         startDate,
         endDate,
-        preferences,
       }),
     });
 
@@ -142,6 +140,14 @@ export const itineraryAPI = {
     const response = await fetchWithAuth(`/itinerary/${id}`, {
       method: "PUT",
       body: JSON.stringify(updates),
+    });
+
+    return response.json();
+  },
+
+  deleteItinerary: async (id: string) => {
+    const response = await fetchWithAuth(`/itinerary/${id}`, {
+      method: "DELETE",
     });
 
     return response.json();

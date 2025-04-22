@@ -47,6 +47,7 @@ export function CreateItinerary({
   const [error, setError] = useState("");
   const router = useRouter();
   const rawResponse = messages.map((message) => message.content).join(" "); // Combine all message contents
+  // console.log("Raw response:", rawResponse);
 
   // Gather all preferences as strings for API
   const getAllPreferences = () => {
@@ -89,8 +90,8 @@ export function CreateItinerary({
         travelPreferences.destination,
         rawResponse,
         new Date(startDate),
-        new Date(endDate),
-        getAllPreferences()
+        new Date(endDate)
+        // getAllPreferences()
       );
 
       if (response.itinerary && response.itinerary._id) {

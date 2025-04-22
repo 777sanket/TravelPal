@@ -4,6 +4,7 @@ import ChatHistory from "../models/ChatHistory";
 import router from "../routes/auth.routes";
 import { parseConversationToItinerary } from "../utils/itineraryParser";
 import fetch from "node-fetch";
+import { sampleTemplate } from "../utils/template";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -25,7 +26,8 @@ const callAIModel = async (messages: any[]): Promise<string> => {
         },
         body: JSON.stringify({
           // model: "deepseek/deepseek-r1:free",
-          model: "openai/gpt-4.1-nano",
+          // model: "openai/gpt-4.1-nano",
+          model: "meta-llama/llama-4-maverick:free",
           messages,
         }),
       }
@@ -63,7 +65,7 @@ export const createItinerary: RequestHandler = async (
       rawResponse,
       startDate,
       endDate,
-      preferences,
+      // preferences,
     } = req.body;
 
     // Check if chat exists
@@ -72,6 +74,9 @@ export const createItinerary: RequestHandler = async (
       res.status(404).json({ message: "Chat history not found" });
       return;
     }
+
+    // console.log("Chat history:", chatHistory);
+    // console.log("Raw:", rawResponse);
 
     const chatIndex = chatHistory.chats.findIndex(
       (chat) => chat._id.toString() === chatId
@@ -88,21 +93,53 @@ export const createItinerary: RequestHandler = async (
                   Itineries should be in the following format: Time to visit, how to reach, places to visit, things to do, where to stay, where to eat, travel Tips
                   Then Add Day wise itinerary with the following format:
                   title: Day wise
-                
-                  Day 1: Date, Activities
-                  Day 2: Date, Activities
-                  Day 3: Date, Activities
-                  Day 4: Date, Activities
-                  etc
+               
                   Use the following format for the itinerary:
                 
 
-
-                  **Your Detailed [Destination] Travel Itinerary**  
-                  *(4 Days | [Style like Budget-Friendly, Adventure-Focused, etc.])*  
+                  /Header Section/
+                  *****Your Detailed [Destination] Travel Itinerary*****  
+                  ***(4 Days(or the days Mentionartion) | [Style like Budget-Friendly, Adventure-Focused, etc.])* 
+                  Add a Good quote related to travel 
 
                   ---
 
+                  /Travel Guide Section/
+              
+                  $$Time to visit:
+                    -Point1
+                    -Point2
+                    -Point3 
+                  $$how to reach:
+                    -Point1
+                    -Point2
+                    -Point3
+                  $$places to visit: 
+                    -Point1
+                    -Point2
+                    -Point3
+                  $$things to do:
+                    -Point1
+                    -Point2
+                    -Point3
+                  $$where to stay:
+                    -Point1
+                    -Point2
+                    -Point3 
+                  $$where to eat:
+                    -Point1
+                    -Point2
+                    -Point3
+
+                  $$travel Tips:
+                    -Point1
+                    -Point2
+                    -Point3
+
+                  ---
+
+
+                  /Itinerary Section/
                   ### **Day 1: [Theme like Arrival & Local Immersion]**  
                   **Morning (8:00 AM – 12:00 PM)**  
                   - **8:00 AM**: [Activity Name] – [Short description]  
@@ -113,20 +150,36 @@ export const createItinerary: RequestHandler = async (
 
                   ---
 
+                  /Higlights Section/
                   Include:
-                  - Daily activities with **timestamps, names, locations, type**
-                  - Local recommendations with **cost estimates (₹)**
-                  - **Food & café suggestions**, hostels, adventure spots
                   - A final section:
                     - Budget Breakdown
+                       --Point1
+                       --Point2
+                       --Point3
                     - Transportation tips
+                       --Point1
+                       --Point2
+                       --Point3
                     - Local etiquette
+                       --Point1
+                       --Point2
+                       --Point3 
                     - Hidden gems
+                       --Point1
+                       --Point2
+                       --Point3
+                    - Safety tips
+                       --Point1
+                       --Point2
+                       --Point3
 
-                  Return the entire result in **clean markdown** (no code blocks or backticks) so it can be parsed directly for display or PDF.
+                  Return the entire result in the below Example Template Fromat directly for display or PDF.
+                  Also Add each section Name in **bold** and the content in *italics*.
+                  Section Names shoul always Start with $$$
 
-                  Example destination: Manali  
-                  Style: Budget-Friendly & Adventure-Focused
+                  Example Tempelate: ${sampleTemplate}  
+                  
 
                   `;
 
@@ -157,6 +210,8 @@ export const createItinerary: RequestHandler = async (
       });
     }
 
+    // console.log("Ai response:", aiResponse);
+
     // Create itinerary
     const itinerary = new Itinerary({
       userId,
@@ -166,7 +221,6 @@ export const createItinerary: RequestHandler = async (
       destination,
       startDate: start,
       endDate: end,
-      preferences,
       days,
     });
 
@@ -258,47 +312,71 @@ export const updateItinerary: RequestHandler = async (
   }
 };
 
-export const itineraryCreate: RequestHandler = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = req.user.userId;
-    const { chatId, message, conversation } = req.body;
+// export const itineraryCreate: RequestHandler = async (
+//   req: AuthenticatedRequest,
+//   res: Response,
+//   next: NextFunction
+// ): Promise<void> => {
+//   try {
+//     const userId = req.user.userId;
+//     const { chatId, message, conversation } = req.body;
 
-    const parsed = parseConversationToItinerary(
-      conversation,
-      message,
-      userId,
-      chatId
-    );
+//     const parsed = parseConversationToItinerary(
+//       conversation,
+//       message,
+//       userId,
+//       chatId
+//     );
 
-    if (!parsed) {
-      res.status(400).json({
-        success: false,
-        error: "Unable to parse itinerary from the given messages.",
-      });
-      return;
-    }
+//     if (!parsed) {
+//       res.status(400).json({
+//         success: false,
+//         error: "Unable to parse itinerary from the given messages.",
+//       });
+//       return;
+//     }
 
-    parsed.rawResponse = message.content;
+//     parsed.rawResponse = message.content;
 
-    const itinerary = await Itinerary.create(parsed);
-    res.status(201).json({ success: true, itinerary });
-  } catch (error) {
-    console.error("Create itinerary error:", error);
-    res.status(500).json({ success: false, error });
-  }
-};
+//     const itinerary = await Itinerary.create(parsed);
+//     res.status(201).json({ success: true, itinerary });
+//   } catch (error) {
+//     console.error("Create itinerary error:", error);
+//     res.status(500).json({ success: false, error });
+//   }
+// };
 
-router.get("/itinerary", async (req: Request, res: Response) => {
-  const { userId } = req.query;
-  const itineraries = await Itinerary.find({ userId });
-  res.status(200).json({ success: true, itineraries }); // rawResponse will be included
-});
+// router.get("/itinerary", async (req: Request, res: Response) => {
+//   const { userId } = req.query;
+//   const itineraries = await Itinerary.find({ userId });
+//   res.status(200).json({ success: true, itineraries }); // rawResponse will be included
+// });
 
-export const itineraryGet: RequestHandler = async (
+// export const itineraryGet: RequestHandler = async (
+//   req: AuthenticatedRequest,
+//   res: Response,
+//   next: NextFunction
+// ): Promise<void> => {
+//   try {
+//     const userId = req.user.userId;
+//     const { id } = req.params;
+
+//     const itinerary = await Itinerary.findOne({ _id: id, userId });
+
+//     if (!itinerary) {
+//       res.status(404).json({ message: "Itinerary not found" });
+//       return;
+//     }
+
+//     res.json({ itinerary });
+//   } catch (error) {
+//     console.error("Get itinerary error:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+//Delete itinerary
+export const deleteItinerary: RequestHandler = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
@@ -307,16 +385,19 @@ export const itineraryGet: RequestHandler = async (
     const userId = req.user.userId;
     const { id } = req.params;
 
-    const itinerary = await Itinerary.findOne({ _id: id, userId });
+    const itinerary = await Itinerary.findOneAndDelete({
+      _id: id,
+      userId,
+    });
 
     if (!itinerary) {
       res.status(404).json({ message: "Itinerary not found" });
       return;
     }
 
-    res.json({ itinerary });
+    res.json({ message: "Itinerary deleted successfully" });
   } catch (error) {
-    console.error("Get itinerary error:", error);
+    console.error("Delete itinerary error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

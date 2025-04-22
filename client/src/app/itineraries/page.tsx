@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { itineraryAPI } from "@/utils/api";
 import { Itinerary } from "@/types";
 import { FiCalendar, FiMapPin, FiClock, FiArrowRight } from "react-icons/fi";
+import { RiDeleteBinLine } from "react-icons/ri";
 
 export default function Itineraries() {
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
@@ -14,6 +15,10 @@ export default function Itineraries() {
   const [error, setError] = useState("");
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  // const [itineraryToEdit, setItineraryToEdit] = useState<Itinerary | null>(
+  //   null
+  // );
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -36,20 +41,21 @@ export default function Itineraries() {
           createdAt: new Date(itinerary.createdAt),
           updatedAt: new Date(itinerary.updatedAt),
           // Ensure preferences is always an array
-          preferences: Array.isArray(itinerary.preferences)
-            ? itinerary.preferences
-            : typeof itinerary.preferences === "string"
-            ? itinerary.preferences.split(",").map((p) => p.trim())
-            : [],
-          days: Array.isArray(itinerary.days)
-            ? itinerary.days.map((day) => ({
-                ...day,
-                date: new Date(day.date),
-              }))
-            : [],
+          // preferences: Array.isArray(itinerary.preferences)
+          //   ? itinerary.preferences
+          //   : typeof itinerary.preferences === "string"
+          //   ? itinerary.preferences.split(",").map((p) => p.trim())
+          //   : [],
+          // days: Array.isArray(itinerary.days)
+          //   ? itinerary.days.map((day) => ({
+          //       ...day,
+          //       date: new Date(day.date),
+          //     }))
+          //   : [],
         }));
 
         setItineraries(processedItineraries);
+        // console.log("Fetched itineraries:", processedItineraries);
       } catch (err) {
         console.error("Error fetching itineraries:", err);
         setError("Failed to load itineraries");
@@ -91,6 +97,46 @@ export default function Itineraries() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this itinerary?")) {
+      try {
+        const response = await itineraryAPI.deleteItinerary(id);
+
+        if (response) {
+          setItineraries((prev) =>
+            prev.filter((itinerary) => itinerary._id !== id)
+          );
+          alert("Itinerary deleted successfully");
+        } else {
+          alert("Failed to delete itinerary");
+        }
+      } catch (err) {
+        console.error("Error deleting itinerary:", err);
+        alert("Failed to delete itinerary");
+      }
+    }
+  };
+
+  const handleUpdateItinerary = async (id: string, updates: any) => {
+    try {
+      const response = await itineraryAPI.updateItinerary(id, updates);
+
+      if (response) {
+        setItineraries((prev) =>
+          prev.map((itinerary) =>
+            itinerary._id === id ? { ...itinerary, ...updates } : itinerary
+          )
+        );
+        alert("Itinerary updated successfully");
+      } else {
+        alert("Failed to update itinerary");
+      }
+    } catch (err) {
+      console.error("Error updating itinerary:", err);
+      alert("Failed to update itinerary");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -129,8 +175,14 @@ export default function Itineraries() {
             {itineraries.map((itinerary) => (
               <div
                 key={itinerary._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+                className="relative bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
               >
+                <button
+                  className="absolute top-2 right-2 backdrop-blur-3xl bg-red-500/50 text-white rounded-full p-2 cursor-pointer hover:bg-red-600 transition-colors"
+                  onClick={() => handleDelete(itinerary._id)}
+                >
+                  <RiDeleteBinLine className="w-5 h-5" />
+                </button>
                 <div className="h-32 bg-gradient-to-r from-blue-400 to-indigo-500 flex items-end p-4">
                   <h3 className="text-xl font-bold text-white">
                     {itinerary.title}
@@ -156,7 +208,7 @@ export default function Itineraries() {
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  {/* <div className="flex flex-wrap gap-2 mb-4">
                     {Array.isArray(itinerary.preferences)
                       ? itinerary.preferences.map((pref, index) => (
                           <span
@@ -167,7 +219,7 @@ export default function Itineraries() {
                           </span>
                         ))
                       : null}
-                  </div>
+                  </div> */}
 
                   <Link
                     href={`/itineraries/${itinerary._id}`}
@@ -182,7 +234,7 @@ export default function Itineraries() {
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
-              You don't have any itineraries yet
+              You don&apos;t have any itineraries yet
             </div>
             <Link
               href="/"

@@ -25,7 +25,8 @@ const callAIModel = async (messages: any[]): Promise<string> => {
         },
         body: JSON.stringify({
           // model: "deepseek/deepseek-r1:free",
-          model: "openai/gpt-4.1-nano",
+          // model: "openai/gpt-4.1-nano",
+          model: "meta-llama/llama-4-maverick:free",
           messages,
         }),
       }
