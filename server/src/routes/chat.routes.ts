@@ -5,6 +5,7 @@ import {
   sendMessage,
   editChatTitle,
   deleteChat,
+  extractTravelPreferences,
 } from "../controllers/chat.controller";
 import { authenticateToken } from "../middleware/auth.middleware";
 
@@ -17,5 +18,6 @@ router.post("/", createChat);
 router.post("/message", sendMessage);
 router.put("/edit/:chatId", editChatTitle);
 router.delete("/delete/:chatId", deleteChat);
+router.post("/extract", extractTravelPreferences);
 
 export default router;

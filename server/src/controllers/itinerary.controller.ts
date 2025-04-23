@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import Itinerary from "../models/Itinerary";
 import ChatHistory from "../models/ChatHistory";
-import router from "../routes/auth.routes";
-import { parseConversationToItinerary } from "../utils/itineraryParser";
+
 import fetch from "node-fetch";
 import { sampleTemplate } from "../utils/template";
 
@@ -98,6 +97,7 @@ export const createItinerary: RequestHandler = async (
                 
 
                   /Header Section/
+                  Add a Good quote related to travel 
                   *****Your Detailed [Destination] Travel Itinerary*****  
                   ***(4 Days(or the days Mentionartion) | [Style like Budget-Friendly, Adventure-Focused, etc.])* 
                   Add a Good quote related to travel 
@@ -174,11 +174,15 @@ export const createItinerary: RequestHandler = async (
                        --Point2
                        --Point3
 
+                  ---
+
                   Return the entire result in the below Example Template Fromat directly for display or PDF.
                   Also Add each section Name in **bold** and the content in *italics*.
                   Section Names shoul always Start with $$$
 
                   Example Tempelate: ${sampleTemplate}  
+
+                  Strictly follow the example template format and do not add any extra information or code blocks.
                   
 
                   `;
@@ -210,9 +214,78 @@ export const createItinerary: RequestHandler = async (
       });
     }
 
-    // console.log("Ai response:", aiResponse);
+    let tags: string[] = [];
+    try {
+      // Create a system prompt for tag extraction
+      const systemPrompt = `
+              You are a travel itinerary tag extractor. Your task is to analyze the travel itinerary text and extract 5-6 relevant tags that best describe the itinerary.
 
-    // Create itinerary
+              Examples of good tags include:
+              - Travel styles (Adventure, Luxury, Budget, Family-friendly, Solo travel, etc.)
+              - Main activities (Hiking, Beach, Sightseeing, Museums, Food tour, etc.)
+              - Geographical features (Mountain, Coastal, Urban, Rural, etc.)
+              - Cultural aspects (Historical, Religious, Art, Music, etc.)
+              - Season or climate (Summer, Winter, Tropical, etc.)
+
+              Extract ONLY 5-6 of the most relevant tags that appear in the text. Return ONLY an array of strings in JSON format.
+
+              Example output format:
+              ["Adventure", "Hiking", "Mountain", "Budget-friendly", "Summer", "Cultural"]
+              `;
+
+      // Use the existing callAIModel function instead of a direct fetch call
+      const tagContent = await callAIModel([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: aiResponse },
+      ]);
+
+      if (tagContent) {
+        try {
+          // Try to parse the JSON response
+          if (tagContent.trim().startsWith("{")) {
+            const jsonData = JSON.parse(tagContent);
+            tags = jsonData.tags || [];
+          } else {
+            // Try to extract array pattern
+            const match = tagContent.match(/\[(.*)\]/s);
+            if (match) {
+              tags = JSON.parse(`[${match[1]}]`);
+            } else {
+              // Fallback to splitting by commas
+              tags = tagContent
+                .replace(/["\[\]{}]/g, "")
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter((tag) => tag.length > 0);
+            }
+          }
+
+          // Ensure we have strings and limit to 6 tags
+          tags = Array.isArray(tags)
+            ? tags
+                .map((tag) => (typeof tag === "string" ? tag : String(tag)))
+                .slice(0, 6)
+            : [];
+
+          console.log("Extracted tags:", tags);
+        } catch (error) {
+          console.error("Error parsing tags:", error);
+
+          // Fallback approach
+          tags = tagContent
+            .replace(/["\[\]{}]/g, "")
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0)
+            .slice(0, 6);
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting tags:", error);
+      // Continue with empty tags if extraction fails
+    }
+
+    // Create itinerary with tags
     const itinerary = new Itinerary({
       userId,
       chatId,
@@ -222,6 +295,7 @@ export const createItinerary: RequestHandler = async (
       startDate: start,
       endDate: end,
       days,
+      tags, // Include the extracted tags
     });
 
     await itinerary.save();
@@ -312,68 +386,106 @@ export const updateItinerary: RequestHandler = async (
   }
 };
 
-// export const itineraryCreate: RequestHandler = async (
-//   req: AuthenticatedRequest,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   try {
-//     const userId = req.user.userId;
-//     const { chatId, message, conversation } = req.body;
+// Update itinerary with tags
+export const updateItineraryWithTags: RequestHandler = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
 
-//     const parsed = parseConversationToItinerary(
-//       conversation,
-//       message,
-//       userId,
-//       chatId
-//     );
+    const itinerary = await Itinerary.findOne({ _id: id, userId });
+    if (!itinerary) {
+      res.status(404).json({ message: "Itinerary not found" });
+      return;
+    }
 
-//     if (!parsed) {
-//       res.status(400).json({
-//         success: false,
-//         error: "Unable to parse itinerary from the given messages.",
-//       });
-//       return;
-//     }
+    // Extract tags from the itinerary's raw response
+    let tags: string[] = [];
+    try {
+      const systemPrompt = `
+You are a travel itinerary tag extractor. Your task is to analyze the travel itinerary text and extract 5-6 relevant tags that best describe the itinerary.
 
-//     parsed.rawResponse = message.content;
+Examples of good tags include:
+- Travel styles (Adventure, Luxury, Budget, Family-friendly, Solo travel, etc.)
+- Main activities (Hiking, Beach, Sightseeing, Museums, Food tour, etc.)
+- Geographical features (Mountain, Coastal, Urban, Rural, etc.)
+- Cultural aspects (Historical, Religious, Art, Music, etc.)
+- Season or climate (Summer, Winter, Tropical, etc.)
 
-//     const itinerary = await Itinerary.create(parsed);
-//     res.status(201).json({ success: true, itinerary });
-//   } catch (error) {
-//     console.error("Create itinerary error:", error);
-//     res.status(500).json({ success: false, error });
-//   }
-// };
+Extract ONLY 5-6 of the most relevant tags that appear in the text. Return ONLY an array of strings in JSON format.
 
-// router.get("/itinerary", async (req: Request, res: Response) => {
-//   const { userId } = req.query;
-//   const itineraries = await Itinerary.find({ userId });
-//   res.status(200).json({ success: true, itineraries }); // rawResponse will be included
-// });
+Example output format:
+["Adventure", "Hiking", "Mountain", "Budget-friendly", "Summer", "Cultural"]
+`;
 
-// export const itineraryGet: RequestHandler = async (
-//   req: AuthenticatedRequest,
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   try {
-//     const userId = req.user.userId;
-//     const { id } = req.params;
+      // Use the existing callAIModel function
+      const tagContent = await callAIModel([
+        { role: "system", content: systemPrompt },
+        { role: "user", content: itinerary.rawResponse },
+      ]);
 
-//     const itinerary = await Itinerary.findOne({ _id: id, userId });
+      if (tagContent) {
+        try {
+          // Try to parse the JSON response
+          if (tagContent.trim().startsWith("{")) {
+            const jsonData = JSON.parse(tagContent);
+            tags = jsonData.tags || [];
+          } else {
+            // Try to extract array pattern
+            const match = tagContent.match(/\[(.*)\]/s);
+            if (match) {
+              tags = JSON.parse(`[${match[1]}]`);
+            } else {
+              // Fallback to splitting by commas
+              tags = tagContent
+                .replace(/["\[\]{}]/g, "")
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter((tag) => tag.length > 0);
+            }
+          }
 
-//     if (!itinerary) {
-//       res.status(404).json({ message: "Itinerary not found" });
-//       return;
-//     }
+          // Ensure we have strings and limit to 6 tags
+          tags = Array.isArray(tags)
+            ? tags
+                .map((tag) => (typeof tag === "string" ? tag : String(tag)))
+                .slice(0, 6)
+            : [];
 
-//     res.json({ itinerary });
-//   } catch (error) {
-//     console.error("Get itinerary error:", error);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
+          console.log("Extracted tags:", tags);
+        } catch (error) {
+          console.error("Error parsing tags:", error);
+
+          // Fallback approach
+          tags = tagContent
+            .replace(/["\[\]{}]/g, "")
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0)
+            .slice(0, 6);
+        }
+      }
+
+      // Update the itinerary with the new tags
+      itinerary.tags = tags;
+      await itinerary.save();
+
+      res.json({
+        message: "Itinerary tags updated successfully",
+        itinerary,
+      });
+    } catch (error) {
+      console.error("Tag extraction error:", error);
+      res.status(500).json({ message: "Failed to extract tags" });
+    }
+  } catch (error) {
+    console.error("Update itinerary tags error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 //Delete itinerary
 export const deleteItinerary: RequestHandler = async (

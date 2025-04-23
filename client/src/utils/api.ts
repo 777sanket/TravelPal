@@ -58,6 +58,12 @@ export const authAPI = {
   },
 };
 
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date | string;
+}
+
 // Chat APIs
 export const chatAPI = {
   getChatHistory: async () => {
@@ -99,6 +105,14 @@ export const chatAPI = {
 
     return response.json();
   },
+  extractTravelPreferences: async (messages: Message[]) => {
+    const response = await fetchWithAuth("/chat/extract", {
+      method: "POST",
+      body: JSON.stringify({ messages }),
+    });
+
+    return response.json();
+  },
 };
 
 // Itinerary APIs
@@ -109,7 +123,8 @@ export const itineraryAPI = {
     destination: string,
     rawResponse: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    tags: string[] = []
   ) => {
     const response = await fetchWithAuth("/itinerary", {
       method: "POST",
@@ -120,6 +135,7 @@ export const itineraryAPI = {
         rawResponse,
         startDate,
         endDate,
+        tags,
       }),
     });
 
@@ -141,13 +157,20 @@ export const itineraryAPI = {
       method: "PUT",
       body: JSON.stringify(updates),
     });
-
     return response.json();
   },
 
   deleteItinerary: async (id: string) => {
     const response = await fetchWithAuth(`/itinerary/${id}`, {
       method: "DELETE",
+    });
+    return response.json();
+  },
+
+  updateItineraryTags: async (id: string, tags: string[]) => {
+    const response = await fetchWithAuth(`/itinerary/${id}/tags`, {
+      method: "PATCH",
+      body: JSON.stringify({ tags }),
     });
 
     return response.json();

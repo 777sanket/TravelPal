@@ -11,6 +11,7 @@ import {
   removeAuthCookie,
   getTokenFromCookie,
 } from "@/utils/auth";
+import { link } from "fs";
 
 interface AuthContextType {
   user: User | null;
@@ -64,10 +65,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     removeAuthCookie();
     alert("Logged out successfully");
+
     // localStorage.removeItem("user");
     localStorage.removeItem("currentChatId");
     setToken(null);
     setUser(null);
+
+    // Redirect to /login page
+    window.location.href = "/login";
   };
 
   return (

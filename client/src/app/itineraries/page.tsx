@@ -6,7 +6,13 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { itineraryAPI } from "@/utils/api";
 import { Itinerary } from "@/types";
-import { FiCalendar, FiMapPin, FiClock, FiArrowRight } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiMapPin,
+  FiClock,
+  FiArrowRight,
+  FiTag,
+} from "react-icons/fi";
 import { RiDeleteBinLine } from "react-icons/ri";
 
 export default function Itineraries() {
@@ -15,10 +21,6 @@ export default function Itineraries() {
   const [error, setError] = useState("");
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  // const [itineraryToEdit, setItineraryToEdit] = useState<Itinerary | null>(
-  //   null
-  // );
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -34,28 +36,19 @@ export default function Itineraries() {
         const response = await itineraryAPI.getItineraries();
 
         // Convert string dates to Date objects before setting state
-        const processedItineraries = response.itineraries.map((itinerary) => ({
-          ...itinerary,
-          startDate: new Date(itinerary.startDate),
-          endDate: new Date(itinerary.endDate),
-          createdAt: new Date(itinerary.createdAt),
-          updatedAt: new Date(itinerary.updatedAt),
-          // Ensure preferences is always an array
-          // preferences: Array.isArray(itinerary.preferences)
-          //   ? itinerary.preferences
-          //   : typeof itinerary.preferences === "string"
-          //   ? itinerary.preferences.split(",").map((p) => p.trim())
-          //   : [],
-          // days: Array.isArray(itinerary.days)
-          //   ? itinerary.days.map((day) => ({
-          //       ...day,
-          //       date: new Date(day.date),
-          //     }))
-          //   : [],
-        }));
+        const processedItineraries = response.itineraries.map(
+          (itinerary: Itinerary) => ({
+            ...itinerary,
+            startDate: new Date(itinerary.startDate),
+            endDate: new Date(itinerary.endDate),
+            createdAt: new Date(itinerary.createdAt),
+            updatedAt: new Date(itinerary.updatedAt),
+            // Ensure tags is always an array
+            tags: Array.isArray(itinerary.tags) ? itinerary.tags : [],
+          })
+        );
 
         setItineraries(processedItineraries);
-        // console.log("Fetched itineraries:", processedItineraries);
       } catch (err) {
         console.error("Error fetching itineraries:", err);
         setError("Failed to load itineraries");
@@ -114,26 +107,6 @@ export default function Itineraries() {
         console.error("Error deleting itinerary:", err);
         alert("Failed to delete itinerary");
       }
-    }
-  };
-
-  const handleUpdateItinerary = async (id: string, updates: any) => {
-    try {
-      const response = await itineraryAPI.updateItinerary(id, updates);
-
-      if (response) {
-        setItineraries((prev) =>
-          prev.map((itinerary) =>
-            itinerary._id === id ? { ...itinerary, ...updates } : itinerary
-          )
-        );
-        alert("Itinerary updated successfully");
-      } else {
-        alert("Failed to update itinerary");
-      }
-    } catch (err) {
-      console.error("Error updating itinerary:", err);
-      alert("Failed to update itinerary");
     }
   };
 
@@ -208,18 +181,23 @@ export default function Itineraries() {
                     </span>
                   </div>
 
-                  {/* <div className="flex flex-wrap gap-2 mb-4">
-                    {Array.isArray(itinerary.preferences)
-                      ? itinerary.preferences.map((pref, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded"
-                          >
-                            {pref}
-                          </span>
-                        ))
-                      : null}
-                  </div> */}
+                  {/* Tags section */}
+                  {itinerary.tags && itinerary.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex items-center text-gray-600 mb-2 w-full">
+                        <FiTag className="mr-2" />
+                        <span className="text-sm">Tags:</span>
+                      </div>
+                      {itinerary.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <Link
                     href={`/itineraries/${itinerary._id}`}

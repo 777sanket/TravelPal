@@ -1,9 +1,7 @@
-"use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { itineraryAPI } from "@/utils/api";
-import { FiMapPin, FiCheck } from "react-icons/fi";
+import { FiMapPin, FiCheck, FiTag } from "react-icons/fi";
 
 interface CreateItineraryProps {
   chatId: string;
@@ -31,7 +29,7 @@ export function CreateItinerary({
   messages,
 }: CreateItineraryProps) {
   const [title, setTitle] = useState(
-    `Trip to ${travelPreferences.destination}`
+    `Trip to ${travelPreferences.destination || "destination"}`
   );
   const [startDate, setStartDate] = useState(
     travelPreferences.startDate
@@ -45,31 +43,35 @@ export function CreateItinerary({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // For manual tag management
+  const [tags, setTags] = useState<string[]>([]);
   const router = useRouter();
-  const rawResponse = messages.map((message) => message.content).join(" "); // Combine all message contents
-  // console.log("Raw response:", rawResponse);
 
-  // Gather all preferences as strings for API
-  const getAllPreferences = () => {
-    const allPrefs: string[] = [];
+  const rawResponse = messages
+    .map((message: { content: string }) => message.content)
+    .join(" ");
 
-    if (travelPreferences.cuisines.length > 0) {
-      allPrefs.push(...travelPreferences.cuisines);
+  // Add or remove a tag
+  const toggleTag = (tag: string) => {
+    if (tags.includes(tag)) {
+      setTags(tags.filter((t) => t !== tag));
+    } else {
+      if (tags.length < 6) {
+        setTags([...tags, tag]);
+      }
     }
+  };
 
-    if (travelPreferences.placeTypes.length > 0) {
-      allPrefs.push(...travelPreferences.placeTypes);
+  // Add a new custom tag
+  const addCustomTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && e.currentTarget.value.trim() && tags.length < 6) {
+      const newTag = e.currentTarget.value.trim();
+      if (!tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+      }
+      e.currentTarget.value = "";
     }
-
-    if (travelPreferences.specialRequirements.length > 0) {
-      allPrefs.push(...travelPreferences.specialRequirements);
-    }
-
-    if (travelPreferences.personalInterests.length > 0) {
-      allPrefs.push(...travelPreferences.personalInterests);
-    }
-
-    return allPrefs;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,14 +86,18 @@ export function CreateItinerary({
     setError("");
 
     try {
+      const destination =
+        travelPreferences.destination || extractDestinationFromMessages();
+
+      // Include tags in the creation request
       const response = await itineraryAPI.createItinerary(
         chatId,
         title,
-        travelPreferences.destination,
+        destination,
         rawResponse,
         new Date(startDate),
-        new Date(endDate)
-        // getAllPreferences()
+        new Date(endDate),
+        tags // Pass the manually entered tags
       );
 
       if (response.itinerary && response.itinerary._id) {
@@ -104,6 +110,14 @@ export function CreateItinerary({
       setError(err.message || "Failed to create itinerary");
       setIsLoading(false);
     }
+  };
+
+  // Extract destination from the first user message if not provided
+  const extractDestinationFromMessages = (): string => {
+    const firstUserMessage = messages.find((msg) => msg.role === "user");
+    return firstUserMessage
+      ? firstUserMessage.content.split(/[,.!?]/)[0].trim()
+      : "destination";
   };
 
   return (
@@ -121,6 +135,7 @@ export function CreateItinerary({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Title field */}
             <div>
               <label
                 htmlFor="title"
@@ -138,6 +153,7 @@ export function CreateItinerary({
               />
             </div>
 
+            {/* Destination display */}
             <div>
               <label
                 htmlFor="destination"
@@ -147,10 +163,14 @@ export function CreateItinerary({
               </label>
               <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
                 <FiMapPin className="text-gray-500 mr-2" />
-                <span>{travelPreferences.destination}</span>
+                <span>
+                  {travelPreferences.destination ||
+                    extractDestinationFromMessages()}
+                </span>
               </div>
             </div>
 
+            {/* Date fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label
@@ -187,31 +207,54 @@ export function CreateItinerary({
               </div>
             </div>
 
+            {/* Manual Tags section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preferences
+                Tags (max 6)
               </label>
-              <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
+
+              <div className="border border-gray-300 rounded-md p-3 bg-gray-50 mb-2">
                 <div className="flex flex-wrap gap-2">
-                  {getAllPreferences().map((pref, index) => (
+                  {tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full flex items-center"
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full flex items-center cursor-pointer hover:bg-blue-200"
+                      onClick={() => toggleTag(tag)}
                     >
                       <FiCheck className="mr-1" size={10} />
-                      {pref}
+                      {tag}
                     </span>
                   ))}
 
-                  {getAllPreferences().length === 0 && (
+                  {tags.length === 0 && (
                     <span className="text-gray-500 text-sm">
-                      No preferences specified
+                      Add tags to categorize your itinerary (optional)
                     </span>
                   )}
                 </div>
               </div>
+
+              <div className="flex items-center">
+                <FiTag className="text-gray-400 absolute ml-3" />
+                <input
+                  type="text"
+                  placeholder="Add a tag (press Enter)"
+                  className="w-full pl-9 px-3 py-2 border border-gray-300 rounded-md"
+                  onKeyDown={addCustomTag}
+                  disabled={tags.length >= 6}
+                />
+              </div>
+              {tags.length >= 6 && (
+                <p className="text-xs text-orange-500 mt-1">Maximum 6 tags</p>
+              )}
+
+              <p className="text-xs text-gray-500 mt-1">
+                You can add your own tags, or the system will automatically
+                suggest relevant tags.
+              </p>
             </div>
 
+            {/* Form buttons */}
             <div className="flex items-center justify-end gap-3 pt-4">
               <button
                 type="button"
@@ -236,5 +279,3 @@ export function CreateItinerary({
     </div>
   );
 }
-
-// Removed duplicate declaration of CreateItinerary

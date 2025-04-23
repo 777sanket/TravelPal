@@ -1,8 +1,13 @@
 // Message types for chat interface
+// export interface Message {
+//   role: "user" | "assistant";
+//   content: string;
+//   timestamp: Date;
+// }
 export interface Message {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
-  timestamp: Date;
+  timestamp: Date | string;
 }
 
 // Chat types for storing conversations
@@ -37,12 +42,20 @@ export interface ItineraryDay {
 }
 
 // Activity structure for itinerary
+// export interface Activity {
+//   time: string;
+//   title: string;
+//   description: string;
+//   location?: string;
+//   category?: string;
+// }
+
 export interface Activity {
   time: string;
-  title: string;
+  name: string;
   description: string;
   location?: string;
-  category?: string;
+  type: "attraction" | "food" | "transport" | "accommodation" | "other";
 }
 
 interface Preferences {
@@ -53,6 +66,25 @@ interface Preferences {
 }
 
 // Full itinerary structure
+// export interface Itinerary {
+//   _id: string;
+//   userId: string;
+//   chatId: string;
+//   title: string;
+//   destination: string;
+//   startDate: Date;
+//   endDate: Date;
+//   preferences: Preferences;
+//   days: ItineraryDay[];
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
+
+export interface Day {
+  date: Date;
+  activities: Activity[];
+}
+
 export interface Itinerary {
   _id: string;
   userId: string;
@@ -61,8 +93,9 @@ export interface Itinerary {
   destination: string;
   startDate: Date;
   endDate: Date;
-  preferences: Preferences;
-  days: ItineraryDay[];
+  days: Day[];
+  rawResponse: string;
+  tags: string[]; // Added tags field
   createdAt: Date;
   updatedAt: Date;
 }

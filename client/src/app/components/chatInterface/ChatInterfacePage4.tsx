@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { chatAPI } from "@/utils/api";
 import { Message } from "@/types";
-import { CreateItinerary } from "../CreateItinerary";
+import { CreateItinerary } from "./CreateItinerary";
 
 interface Chat {
   _id: string;
@@ -21,27 +21,18 @@ interface Chat {
   messages: Message[];
 }
 
-export function ChatInterface1() {
+export function ChatInterface4() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Hello! I'm your travel planning assistant. I'm here to help you plan the perfect trip. Where would you like to travel to?",
+        "Hello! I'm your personal travel planning assistant. I'm here to help you plan the perfect trip. Where would you like to travel to?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [travelPreferences, setTravelPreferences] = useState({
-    destination: "",
-    startDate: null as Date | null,
-    endDate: null as Date | null,
-    cuisines: [] as string[],
-    placeTypes: [] as string[],
-    specialRequirements: [] as string[],
-    personalInterests: [] as string[],
-  });
   const [showCreateItinerary, setShowCreateItinerary] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated } = useAuth();
@@ -53,10 +44,13 @@ export function ChatInterface1() {
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll messages into view
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      const chatContainer = messagesEndRef.current.closest(".overflow-y-auto");
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
   }, [messages]);
 
@@ -113,16 +107,12 @@ export function ChatInterface1() {
         setMessages(chat.messages);
         setCurrentChatId(chatId);
         localStorage.setItem("currentChatId", chatId);
-
-        // Update travel preferences based on the chat
-        updateTravelPreferencesFromChat(chat.messages);
       } else {
-        // If chat not found in history, fetch it from the server
+        // If chat not found in local history, fetch from server
         await fetchChatHistory();
         const updatedChat = chatHistory.find((c) => c._id === chatId);
         if (updatedChat) {
           setMessages(updatedChat.messages);
-          updateTravelPreferencesFromChat(updatedChat.messages);
         }
       }
     } catch (error) {
@@ -141,20 +131,10 @@ export function ChatInterface1() {
       {
         role: "assistant",
         content:
-          "Hello! I'm your travel planning assistant. I'm here to help you plan the perfect trip. Where would you like to travel to?",
+          "Hello! I'm your personal travel planning assistant. I'm here to help you plan the perfect trip. Where would you like to travel to?",
         timestamp: new Date(),
       },
     ]);
-
-    setTravelPreferences({
-      destination: "",
-      startDate: null,
-      endDate: null,
-      cuisines: [],
-      placeTypes: [],
-      specialRequirements: [],
-      personalInterests: [],
-    });
 
     setIsLoading(true);
 
@@ -242,25 +222,9 @@ export function ChatInterface1() {
     }
   };
 
-  // Update travel preferences based on chat messages
-  const updateTravelPreferencesFromChat = (chatMessages: Message[]) => {
-    // This is a simplified version - you may need to adapt this based on your actual data structure
-    let destination = "";
-
-    // Find the first user message which likely contains the destination
-    const firstUserMessage = chatMessages.find((msg) => msg.role === "user");
-    if (firstUserMessage) {
-      destination = firstUserMessage.content;
-    }
-
-    setTravelPreferences((prev) => ({
-      ...prev,
-      destination,
-    }));
-  };
-
-  const isConversationComplete = () => {
-    return messages.length >= 3;
+  // Check if conversation has enough exchanges to create an itinerary
+  const isConversationReadyForItinerary = () => {
+    return messages.filter((msg) => msg.role === "user").length >= 3;
   };
 
   // Handle sending messages
@@ -301,8 +265,10 @@ export function ChatInterface1() {
 
     try {
       if (isAuthenticated) {
+        // Send message to backend
         const response = await chatAPI.sendMessage(currentChatId, input);
 
+        // Update messages with AI response
         setMessages((prev) => [
           ...prev.slice(0, -1),
           response.conversation[response.conversation.length - 2] ||
@@ -313,30 +279,25 @@ export function ChatInterface1() {
         // Update chat history after sending a message
         await fetchChatHistory();
       } else {
+        // Non-authenticated user flow - simulated responses
         setTimeout(() => {
           let responseContent = "";
           const messageCount = messages.length;
 
+          // Simple simulated responses
           if (messageCount === 1) {
+            // First message - assumed to be destination
             responseContent = `Great choice! When are you planning to visit ${userMessage.content}? Please provide start and end dates.`;
-            setTravelPreferences((prev) => ({
-              ...prev,
-              destination: userMessage.content,
-            }));
           } else if (messageCount === 3) {
-            responseContent = `Wonderful! Do you have any preferred cuisines you'd like to try during your trip?`;
+            responseContent = `Wonderful! What kinds of activities are you interested in during your trip?`;
           } else if (messageCount === 5) {
-            responseContent = `Noted! What types of places do you enjoy visiting? (e.g., beaches, museums, nature, shopping, etc.)`;
+            responseContent = `That sounds perfect! Are there any specific requirements for your trip? (e.g., budget constraints, accessibility needs)`;
           } else if (messageCount === 7) {
-            responseContent = `Do you have any special requirements for this trip? (e.g., family-friendly, solo travel, pet-friendly)`;
-          } else if (messageCount === 9) {
-            responseContent = `Almost done! Are there any other personal interests you'd like me to consider when creating your itinerary?`;
-          } else if (messageCount === 11) {
-            const destination =
-              travelPreferences.destination || "your destination";
-            responseContent = `Thank you for sharing all that information! Based on your preferences, I'll create a personalized itinerary for ${destination}. You'll be able to view and customize it soon.`;
+            responseContent = `Thanks for sharing those details. Would you like any specific recommendations for your trip?`;
+          } else if (messageCount >= 9) {
+            responseContent = `I have enough information now to help create your travel itinerary. Let me know if you have any specific questions!`;
           } else {
-            responseContent = `I understand. Is there anything else you'd like to share about your travel plans?`;
+            responseContent = `Thanks for the information! Is there anything else you'd like to tell me about your trip?`;
           }
 
           const assistantMessage: Message = {
@@ -396,8 +357,10 @@ export function ChatInterface1() {
 
   // Get chat title for display
   const getChatTitle = () => {
-    if (travelPreferences.destination) {
-      return `Trip to ${travelPreferences.destination}`;
+    // Extract destination from first user message
+    const firstUserMsg = messages.find((msg) => msg.role === "user");
+    if (firstUserMsg) {
+      return `Trip to ${firstUserMsg.content.split(/[,.!?]/)[0].trim()}`;
     }
 
     if (currentChatId && isAuthenticated) {
@@ -611,49 +574,62 @@ export function ChatInterface1() {
           </div>
         </div>
 
-        {/* Travel Preferences Summary */}
-        {messages && (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              {isConversationComplete() && isAuthenticated && (
-                <div className="mt-4 flex justify-center">
-                  <button
-                    onClick={() => setShowCreateItinerary(true)}
-                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    <FiFileText />
-                    Create Itinerary
-                  </button>
-                </div>
-              )}
+        {/* Create Itinerary Button */}
+        <div className="p-4 border-t border-gray-200 bg-white">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            {isConversationReadyForItinerary() && isAuthenticated && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowCreateItinerary(true)}
+                  className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  <FiFileText />
+                  Create Itinerary
+                </button>
+              </div>
+            )}
 
-              {isConversationComplete() && !isAuthenticated && (
-                <div className="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
-                  <p className="font-medium">Your trip is ready!</p>
-                  <p className="mt-1">
-                    Please{" "}
-                    <a href="/login" className="underline">
-                      login
-                    </a>{" "}
-                    or{" "}
-                    <a href="/register" className="underline">
-                      register
-                    </a>{" "}
-                    to create and save your itinerary.
-                  </p>
-                </div>
-              )}
-            </div>
+            {isConversationReadyForItinerary() && !isAuthenticated && (
+              <div className="p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
+                <p className="font-medium">Your trip is ready!</p>
+                <p className="mt-1">
+                  Please{" "}
+                  <a href="/login" className="underline">
+                    login
+                  </a>{" "}
+                  or{" "}
+                  <a href="/register" className="underline">
+                    register
+                  </a>{" "}
+                  to create and save your itinerary.
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Create Itinerary Modal */}
         {showCreateItinerary && currentChatId && (
           <CreateItinerary
             chatId={currentChatId}
-            travelPreferences={travelPreferences}
+            travelPreferences={{
+              destination: "",
+              startDate: null,
+              endDate: null,
+              cuisines: [],
+              placeTypes: [],
+              specialRequirements: [],
+              personalInterests: [],
+            }}
             onClose={() => setShowCreateItinerary(false)}
-            messages={messages}
+            // messages={messages}
+            messages={messages.map((msg) => ({
+              ...msg,
+              timestamp:
+                msg.timestamp instanceof Date
+                  ? msg.timestamp.toISOString()
+                  : msg.timestamp,
+            }))}
           />
         )}
       </div>

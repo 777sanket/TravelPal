@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePathname } from "next/navigation";
 
 export function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -27,6 +27,19 @@ export function Navbar() {
             >
               Home
             </Link>
+
+            {isAuthenticated && (
+              <Link
+                href="/chatPage"
+                className={`${
+                  pathname === "/chat"
+                    ? "text-blue-600"
+                    : "text-gray-600 hover:text-blue-600"
+                }`}
+              >
+                Chat
+              </Link>
+            )}
 
             {isAuthenticated ? (
               <>
